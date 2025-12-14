@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VORTEX ENGINE | AI-Integrated</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            cursor: none; /* Custom cursor */
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* UI Layer */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            padding: 2rem;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            mix-blend-mode: exclusion;
+        }
+
+        .hud-text {
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .hud-value {
+            font-weight: 700;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+        }
+
+        /* Glitch Text Effect */
+        .glitch-wrapper {
+            position: relative;
+        }
+        
+        .glitch-text {
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1;
+            position: relative;
+            color: white;
+            transition: color 0.5s;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -1px 0 #ff00c1;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -1px 0 #00fff9;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(31px, 9999px, 91px, 0); }
+            20% { clip: rect(78px, 9999px, 80px, 0); }
+            40% { clip: rect(13px, 9999px, 32px, 0); }
+            60% { clip: rect(49px, 9999px, 88px, 0); }
+            80% { clip: rect(9px, 9999px, 22px, 0); }
+            100% { clip: rect(62px, 9999px, 14px, 0); }
+        }
+
+        @keyframes glitch-anim2 {
+            0% { clip: rect(63px, 9999px, 60px, 0); }
+            20% { clip: rect(12px, 9999px, 95px, 0); }
+            40% { clip: rect(82px, 9999px, 97px, 0); }
+            60% { clip: rect(37px, 9999px, 7px, 0); }
+            80% { clip: rect(24px, 9999px, 14px, 0); }
+            100% { clip: rect(51px, 9999px, 86px, 0); }
+        }
+
+        /* Audio Button */
+        #audio-btn {
+            pointer-events: auto;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            font-family: 'Rajdhani', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #audio-btn:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: #0ff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Terminal Input */
+        .terminal-container {
+            pointer-events: auto;
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .terminal-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .terminal-input-wrapper::before {
+            content: '>';
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #0ff;
+            font-family: 'Share Tech Mono', monospace;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        #terminal-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #0ff;
+            padding: 10px 10px 10px 30px;
+            color: #0ff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        #terminal-input:focus {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        #terminal-input:disabled {
+            border-color: #555;
+            color: #555;
+        }
+
+        #terminal-status {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: #0ff;
+            opacity: 0.7;
+            height: 15px;
+            text-transform: uppercase;
+        }
+        
+        /* New System Log UI */
+        #system-log {
+            position: absolute;
+            top: 50%;
+            right: 2rem;
+            transform: translateY(-50%);
+            width: 250px;
+            text-align: right;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.5;
+            pointer-events: none;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+            border-right: 2px solid #0ff;
+            padding-right: 10px;
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Custom Cursor */
+        #cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #0ff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 100;
+            mix-blend-mode: difference;
+            transition: width 0.1s, height 0.1s;
+        }
+        
+        #cursor-dot {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: #ff00c1;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 101;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+    <div id="cursor-dot"></div>
+
+    <div id="canvas-container"></div>
+
+    <div class="ui-layer">
+        <div class="flex justify-between items-start">
+            <div>
+                <div class="hud-text">System Status</div>
+                <div class="hud-value" id="system-status-text">OPERATIONAL</div>
+            </div>
+            <div class="text-right">
+                <div class="hud-text">Particle Count</div>
+                <div class="hud-value">5000</div>
+            </div>
+        </div>
+
+        <div id="system-log">
+            <!-- Logs injected here -->
+        </div>
+
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+            <div class="glitch-wrapper">
+                <div class="glitch-text" id="main-title" data-text="VORTEX">VORTEX</div>
+            </div>
+            <div class="hud-text mt-4 opacity-50 tracking-[0.5em]">INTERACTIVE FIELD</div>
+        </div>
+
+        <!-- Center Bottom: Terminal -->
+        <div class="terminal-container">
+            <div class="terminal-input-wrapper">
+                <input type="text" id="terminal-input" placeholder="OVERRIDE SYSTEM (e.g., 'Solar Flare')" autocomplete="off">
+            </div>
+            <div id="terminal-status">AWAITING COMMAND</div>
+        </div>
+
+        <div class="flex justify-between items-end w-full" style="position: absolute; bottom: 2rem; padding: 0 2rem; box-sizing: border-box; pointer-events: none;">
+            <div style="pointer-events: auto;">
+                <button id="audio-btn">INITIALIZE AUDIO</button>
+            </div>
+            <div class="text-right">
+                <div class="hud-text">Energy Output</div>
+                <div class="hud-value" id="energy-val">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = ""; // API Key injected by environment
+
+        /**
+         * VORTEX ENGINE v2.5
+         * High-performance particle physics with Gemini AI Integration & Adaptive Shaders
+         */
+
+        // --- CONFIG ---
+        const PARTICLE_COUNT = 5000;
+        const PARTICLE_SIZE = 2;
+        
+        // Physics Config (Mutable by AI)
+        let config = {
+            friction: 0.96,
+            gravity: 0.5,
+            color1: new THREE.Color(0x00ffff),
+            color2: new THREE.Color(0xff00c1),
+            glitchBase: 0.0,
+            droneFreq: 60,
+            shaderMode: 0 // 0=Chromatic, 1=Pixel, 2=Warp
+        };
+
+        // Target Config for Interpolation
+        let targetConfig = { ...config, color1: config.color1.clone(), color2: config.color2.clone() };
+
+        // --- SETUP ---
+        const container = document.getElementById('canvas-container');
+        const energyVal = document.getElementById('energy-val');
+        const cursor = document.getElementById('cursor');
+        const cursorDot = document.getElementById('cursor-dot');
+        const systemStatusText = document.getElementById('system-status-text');
+        const systemLog = document.getElementById('system-log');
+        
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const composerScene = new THREE.Scene();
+        const composerCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+
+        // --- PARTICLES (ShaderMaterial) ---
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(PARTICLE_COUNT * 3);
+        const velocities = new Float32Array(PARTICLE_COUNT * 3);
+        const mixFactors = new Float32Array(PARTICLE_COUNT);
+
+        for(let i=0; i<PARTICLE_COUNT; i++) {
+            positions[i*3] = (Math.random() - 0.5) * 100;
+            positions[i*3+1] = (Math.random() - 0.5) * 100;
+            positions[i*3+2] = (Math.random() - 0.5) * 50;
+            
+            velocities[i*3] = (Math.random() - 0.5) * 0.1;
+            velocities[i*3+1] = (Math.random() - 0.5) * 0.1;
+            velocities[i*3+2] = 0;
+
+            mixFactors[i] = Math.random();
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('mixFactor', new THREE.BufferAttribute(mixFactors, 1));
+
+        const particleMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uColor1: { value: config.color1 },
+                uColor2: { value: config.color2 },
+                uSize: { value: PARTICLE_SIZE }
+            },
+            vertexShader: `
+                attribute float mixFactor;
+                varying vec3 vColor;
+                uniform vec3 uColor1;
+                uniform vec3 uColor2;
+                uniform float uSize;
+                void main() {
+                    vColor = mix(uColor1, uColor2, mixFactor);
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    gl_PointSize = uSize * (300.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vColor;
+                void main() {
+                    vec2 coord = gl_PointCoord - vec2(0.5);
+                    if(length(coord) > 0.5) discard;
+                    gl_FragColor = vec4(vColor, 0.8);
+                }
+            `,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particleSystem = new THREE.Points(geometry, particleMaterial);
+        scene.add(particleSystem);
+
+        // --- POST-PROCESSING SHADER (ADAPTIVE MODES) ---
+        const quadGeometry = new THREE.PlaneGeometry(2, 2);
+        
+        const glitchUniforms = {
+            tDiffuse: { value: null },
+            time: { value: 0 },
+            amount: { value: 0 },
+            distortion: { value: 0 },
+            mode: { value: 0 } // 0: Chromatic, 1: Pixel, 2: Warp
+        };
+
+        const glitchMaterial = new THREE.ShaderMaterial({
+            uniforms: glitchUniforms,
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D tDiffuse;
+                uniform float time;
+                uniform float amount;
+                uniform float distortion;
+                uniform int mode;
+                varying vec2 vUv;
+                
+                float rand(vec2 co){ return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453); }
+
+                void main() {
+                    vec2 p = vUv;
+                    vec4 color;
+
+                    // MODE 0: CHROMATIC ABERRATION (Standard Glitch)
+                    if (mode == 0) {
+                        float rOffset = amount * 0.05;
+                        if(distortion > 0.0) {
+                            float noise = rand(vec2(0.0, floor(p.y * 20.0) + time));
+                            if(noise < distortion) {
+                                p.x += (rand(vec2(time, p.y)) - 0.5) * amount * 0.5;
+                            }
+                        }
+                        vec4 cr = texture2D(tDiffuse, p + vec2(rOffset, 0.0));
+                        vec4 cg = texture2D(tDiffuse, p);
+                        vec4 cb = texture2D(tDiffuse, p + vec2(-rOffset, 0.0));
+                        color = vec4(cr.r, cg.g, cb.b, 1.0);
+                    }
+                    
+                    // MODE 1: DIGITAL ROT (Pixelation)
+                    else if (mode == 1) {
+                        float pixels = 200.0 - (amount * 150.0); 
+                        if (pixels < 10.0) pixels = 10.0;
+                        vec2 pixelUV = floor(p * pixels) / pixels;
+                        color = texture2D(tDiffuse, pixelUV);
+                        // Add green tint for retro feel
+                        color.g *= 1.2;
+                    }
+                    
+                    // MODE 2: LIQUID WARP (Sinusoidal)
+                    else if (mode == 2) {
+                        p.x += sin(p.y * 10.0 + time * 2.0) * amount * 0.1;
+                        p.y += cos(p.x * 10.0 + time * 2.0) * amount * 0.1;
+                        color = texture2D(tDiffuse, p);
+                        // Invert colors slightly at high intensity
+                        if(amount > 0.8) color.rgb = 1.0 - color.rgb;
+                    }
+
+                    gl_FragColor = color;
+                }
+            `
+        });
+
+        const quad = new THREE.Mesh(quadGeometry, glitchMaterial);
+        composerScene.add(quad);
+
+        // --- INTERACTION ---
+        let mouse = new THREE.Vector3(0, 0, 0);
+        let mouseSpeed = 0;
+        let lastMouse = new THREE.Vector2(0, 0);
+        let isMouseDown = false;
+        let chargeLevel = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth) * 2 - 1;
+            const y = -(e.clientY / window.innerHeight) * 2 + 1;
+            const vec = new THREE.Vector3(x, y, 0.5);
+            vec.unproject(camera);
+            const dir = vec.sub(camera.position).normalize();
+            const distance = -camera.position.z / dir.z;
+            const pos = camera.position.clone().add(dir.multiplyScalar(distance));
+            mouse.copy(pos);
+
+            const dx = e.clientX - lastMouse.x;
+            const dy = e.clientY - lastMouse.y;
+            mouseSpeed = Math.sqrt(dx*dx + dy*dy) / 100;
+            mouseSpeed = Math.min(mouseSpeed, 1);
+            lastMouse.set(e.clientX, e.clientY);
+
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            cursorDot.style.left = e.clientX + 'px';
+            cursorDot.style.top = e.clientY + 'px';
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if(e.target.tagName !== 'INPUT') { 
+                isMouseDown = true;
+                cursor.style.width = '60px';
+                cursor.style.height = '60px';
+                cursor.style.borderColor = '#' + config.color2.getHexString();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isMouseDown = false;
+            chargeLevel = 0;
+            cursor.style.width = '20px';
+            cursor.style.height = '20px';
+            cursor.style.borderColor = '#' + config.color1.getHexString();
+        });
+
+        // --- AUDIO ENGINE ---
+        let audioCtx, osc, gainNode;
+        let isAudioInit = false;
+
+        document.getElementById('audio-btn').addEventListener('click', () => {
+            if(isAudioInit) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            osc = audioCtx.createOscillator();
+            gainNode = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.value = config.droneFreq;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400;
+            osc.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+            gainNode.gain.value = 0.1;
+            isAudioInit = true;
+            document.getElementById('audio-btn').innerText = "AUDIO ACTIVE";
+            document.getElementById('audio-btn').style.borderColor = "#" + config.color1.getHexString();
+            document.getElementById('audio-btn').style.color = "#" + config.color1.getHexString();
+        });
+
+        function updateAudio(intensity, explosion) {
+            if(!isAudioInit) return;
+            const targetFreq = config.droneFreq + (intensity * 200);
+            osc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.1);
+            const targetGain = 0.05 + (intensity * 0.2) + (explosion ? 0.5 : 0);
+            gainNode.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.1);
+        }
+
+        // --- GEMINI AI INTEGRATION ---
+        const terminalInput = document.getElementById('terminal-input');
+        const terminalStatus = document.getElementById('terminal-status');
+
+        terminalInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') executeCommand();
+        });
+
+        function addLog(text, color) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `>> ${text}`;
+            entry.style.borderRightColor = color;
+            systemLog.appendChild(entry);
+            // Keep log short
+            if(systemLog.children.length > 5) systemLog.removeChild(systemLog.firstChild);
+        }
+
+        async function executeCommand() {
+            const prompt = terminalInput.value.trim();
+            if(!prompt) return;
+
+            terminalStatus.innerText = "TRANSMITTING TO CORE...";
+            terminalInput.disabled = true;
+            terminalInput.value = '';
+
+            // Visual feedback - glitch spike
+            glitchUniforms.amount.value = 0.5;
+
+            // Exponential backoff retry logic
+            const MAX_RETRIES = 3;
+            let attempt = 0;
+            let response;
+            
+            while (attempt < MAX_RETRIES) {
+                try {
+                    const systemPrompt = `
+                        You are the AI Core of the Vortex Physics Engine.
+                        Interpret the user's command to configure the engine's visuals and physics.
+                        
+                        Choose a 'shaderMode':
+                        0 = Standard Chromatic Aberration (High tech, sleek, fast)
+                        1 = Pixel/Digital Rot (Retro, virus, decay, 8-bit)
+                        2 = Liquid Warp/Melt (Organic, trippy, dream, water)
+                        
+                        Output JSON ONLY. Format:
+                        {
+                            "color1": "hex string", 
+                            "color2": "hex string",
+                            "gravity": float, // 0.1 to 1.5
+                            "friction": float, // 0.85 to 0.99
+                            "droneFreq": integer, // 40 to 200
+                            "statusText": "string", // Short status (max 5 words, CAPS)
+                            "shaderMode": integer, // 0, 1, or 2
+                            "logMessage": "string" // A cryptic, sci-fi system log explaining the change (e.g. "Injecting viral code...")
+                        }
+                    `;
+
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: `Command: "${prompt}"` }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] },
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const result = JSON.parse(data.candidates[0].content.parts[0].text);
+                        
+                        applyOverride(result);
+                        terminalStatus.innerText = "SYSTEM OVERRIDE COMPLETE";
+                        terminalInput.disabled = false;
+                        return; // Success, exit function
+                    } else if (response.status === 429) {
+                        // Rate limit error, retry with backoff
+                        attempt++;
+                        if (attempt < MAX_RETRIES) {
+                            const delay = Math.pow(2, attempt) * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        } else {
+                            throw new Error('Rate limit exceeded. Max retries reached.');
+                        }
+                    } else {
+                        throw new Error(`API Error: ${response.statusText}`);
+                    }
+                } catch (err) {
+                    // Non-rate limit errors or final rate limit failure
+                    console.error("VORTEX CORE ERROR:", err);
+                    terminalStatus.innerText = "CONNECTION FAILURE";
+                    terminalInput.disabled = false;
+                    setTimeout(() => terminalStatus.innerText = "AWAITING COMMAND", 2000);
+                    return; // Fail, exit function
+                }
+            }
+        }
+
+
+        function applyOverride(data) {
+            // Tween target values
+            targetConfig.color1 = new THREE.Color(data.color1);
+            targetConfig.color2 = new THREE.Color(data.color2);
+            targetConfig.gravity = data.gravity;
+            targetConfig.friction = data.friction;
+            targetConfig.droneFreq = data.droneFreq;
+            
+            // Immediate switch for integers
+            config.shaderMode = data.shaderMode;
+            glitchUniforms.mode.value = data.shaderMode;
+
+            // Update UI Text
+            systemStatusText.innerText = data.statusText;
+            addLog(data.logMessage, data.color1);
+            
+            // Update UI Colors
+            document.getElementById('audio-btn').style.borderColor = data.color1;
+            document.getElementById('audio-btn').style.color = data.color1;
+            document.getElementById('terminal-input').style.borderColor = data.color1;
+            document.getElementById('terminal-input').style.color = data.color1;
+            
+            cursor.style.borderColor = data.color1;
+            cursorDot.style.backgroundColor = data.color2;
+        }
+
+        // --- ANIMATION LOOP ---
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+
+            // LERP CONFIG (Smooth Transitions)
+            config.color1.lerp(targetConfig.color1, 0.05);
+            config.color2.lerp(targetConfig.color2, 0.05);
+            config.gravity += (targetConfig.gravity - config.gravity) * 0.05;
+            config.friction += (targetConfig.friction - config.friction) * 0.05;
+            config.droneFreq += (targetConfig.droneFreq - config.droneFreq) * 0.05;
+
+            // Update Particle Uniforms
+            particleMaterial.uniforms.uColor1.value = config.color1;
+            particleMaterial.uniforms.uColor2.value = config.color2;
+
+            const positions = particleSystem.geometry.attributes.position.array;
+            
+            let energy = 0;
+            let explosion = false;
+
+            if (isMouseDown) {
+                chargeLevel += 0.05;
+                mouseSpeed += 0.1;
+                chargeLevel = Math.min(chargeLevel, 5);
+            } else if (chargeLevel > 0) {
+                explosion = true;
+                chargeLevel = 0;
+            }
+
+            for(let i=0; i<PARTICLE_COUNT; i++) {
+                const ix = i*3;
+                const iy = i*3+1;
+                const iz = i*3+2;
+
+                let px = positions[ix];
+                let py = positions[iy];
+
+                let dx = mouse.x - px;
+                let dy = mouse.y - py;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if(dist < 1) dist = 1;
+
+                const fx = dx / dist;
+                const fy = dy / dist;
+
+                if (explosion && dist < 50) {
+                    velocities[ix] -= fx * 10;
+                    velocities[iy] -= fy * 10;
+                } else if (isMouseDown) {
+                    // Attraction force adjusted by charge level
+                    velocities[ix] += fx * config.gravity * 2 * chargeLevel * 0.5; 
+                    velocities[iy] += fy * config.gravity * 2 * chargeLevel * 0.5;
+                } else {
+                    // Normal attraction
+                    velocities[ix] += fx * config.gravity;
+                    velocities[iy] += fy * config.gravity;
+                }
+                
+                // Swirl (Rotation)
+                velocities[ix] -= fy * 0.5;
+                velocities[iy] += fx * 0.5;
+
+                positions[ix] += velocities[ix];
+                positions[iy] += velocities[iy];
+                positions[iz] += velocities[iz];
+
+                velocities[ix] *= config.friction;
+                velocities[iy] *= config.friction;
+                velocities[iz] *= config.friction;
+
+                positions[iz] += Math.sin(time + px * 0.1) * 0.1;
+                energy += Math.abs(velocities[ix]) + Math.abs(velocities[iy]);
+            }
+
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+
+            camera.position.x += (mouse.x * 0.5 - camera.position.x) * 0.05;
+            camera.position.y += (mouse.y * 0.5 - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.setRenderTarget(renderTarget);
+            renderer.clear();
+            renderer.render(scene, camera);
+
+            glitchUniforms.tDiffuse.value = renderTarget.texture;
+            glitchUniforms.time.value = time;
+            
+            let intensity = mouseSpeed * 0.5;
+            if (isMouseDown) intensity += chargeLevel * 0.1;
+            if (explosion) intensity = 2.0;
+
+            glitchUniforms.amount.value += (intensity - glitchUniforms.amount.value) * 0.1;
+            glitchUniforms.distortion.value = intensity > 0.5 ? Math.random() : 0;
+
+            renderer.setRenderTarget(null);
+            renderer.render(composerScene, composerCamera);
+
+            const totalEnergy = Math.min(Math.floor(energy / 10), 100);
+            energyVal.innerText = totalEnergy + "%";
+            energyVal.style.color = '#' + config.color1.getHexString();
+
+            updateAudio(glitchUniforms.amount.value, explosion);
+            mouseSpeed *= 0.95;
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderTarget.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
